@@ -4,6 +4,11 @@ import re
 import toolbox as tb
 import time
 import random
+# import html2text
+
+# h2t = html2text.HTML2Text()
+# h2t.ignore_images = True
+# h2t.ignore_tables = True
 
 
 def extract_essay_df():
@@ -34,13 +39,19 @@ essay_df.describe()  # 198 unique essays as of Feb 22
 essay_df.head()
 
 
-def soup_and_string_essay(url):
-    """Take an essay's url, turn it into a soup and a string"""
+def url2soup(url):
+    """Take an essay's url, turn it into a soup and extract the text"""
     essay_soup = tb.click_and_soup(url)
-    # BS4: the essay is found in "table>tr>td>table>tr>td>font>p"[0]
-    essay_soup = essay_soup.select("table>tr>td>table>tr>td>font>p")[0]
-    string_essay = str(essay_soup)  # turn soup to string
-    return (essay_soup, string_essay)
+    essay_soup = essay_soup.select("table>tr>td>table>tr>td>font")[0]
+    # note: some essays have a paragraph tag and some don't
+    # vb: "table>tr>td>table>tr>td>font"
+    # ds: "table>tr>td>table>tr>td>font>p"
+    return essay_soup
+
+
+def soup2string(essay_soup):
+    """Take an essay in soup form and turn it to a string"""
+    return str(essay_soup)
 
 
 def extract_essay_outlinks(essay_soup):
@@ -55,38 +66,62 @@ def extract_essay_outlinks(essay_soup):
     return real_links
 
 
-def extract_essay_body(string_essay):
+def clean_essay_text(string_essay):
     """Take the soup from a given essay and return its formatted body"""
-    # order of preprocessing tasks matters
+    # order of task preprocessing matters
     string_essay = re.sub("\n", " ", string_essay)  # line breaks for spaces
-    string_essay = re.sub('<br/><br/>', ' \n', string_essay)
+    string_essay = re.sub('<br/><br/>', ' \n\n', string_essay)
     string_essay = re.sub('<[^<]+?>', '', string_essay)
     # don't forget strip() to remove leading and trailing whitespaces
     string_essay = re.sub("  ", " ", string_essay).strip()
     return string_essay
 
 
-# outlink_vector_df = pd.DataFrame()
-outlink_vector = []
-for i in essay_df.index[:5]:
-    i = 1
-    url = essay_df['link'][i]
-    essay_soup, string_essay = soup_and_string_essay(url)
-    # create column vector of outlinks
-    outlink_vector.append((i, extract_essay_outlinks(essay_soup)))
-    time.sleep(0.3 + random.random())  # some server kindness
+def extract_body_and_features(essay_df):
+    """Take a dataframe with essay links and return essay body and features"""
+    data = []
+    for i in essay_df.index[:5]:
+        # i = 1
+        url = essay_df['link'][i]
+        essay_soup = url2soup(url)
+        essay_string = soup2string(essay_soup)
+        # append record-level features
+        essay_body = clean_essay_text(essay_string)
+        essay_outlinks = extract_essay_outlinks(essay_soup)
+        data.append([
+                    essay_body,
+                    essay_outlinks,
+                    len(essay_body.split())
+                    ])
+        time.sleep(0.3 + random.random())  # some server kindness
 
-    processed_essay = extract_essay_body(string_essay)
+    feature_df = pd.DataFrame(data, columns=['body', 'outlinks', 'word_count'])
+    return feature_df
+
+
+# left join the original df with the feature df
+feature_df = extract_body_and_features(essay_df)
+full_df = pd.merge(essay_df, feature_df, how='left',
+                   left_index=True, right_index=True)
+full_df.head()
+
+
+    
     
     # save
     name2save = essay_df['file_name'][i].split('.')[0]
     tb.save_as_txt(processed_essay, name2save)
+    tb.save_as_txt(processed_essay, 'vb_march23')
+    tb.save_as_txt(processed_essay, 'ds_march23')
     tb.save_as_html(string_essay, name2save)
     tb.save_as_txt(string_essay, name2save)
 
+# h2t_essay = h2t.handle(str(essay_soup).strip())
+# tb.save_as_txt(h2t_essay, "ds_h2t")
+
+
 outlink_vector_df = pd.DataFrame(outlink_vector, columns=['index', 'outlinks'])
 outlink_vector_df.head()
-
 
 
 
@@ -104,7 +139,7 @@ def extract_essay_date(string_essay):
 
 
 # extract_essay_outlinks
-# extract_essay_body
+# clean_essay_text
 # extract_essay_date
 
 
