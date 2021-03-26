@@ -99,8 +99,14 @@ def extract_body_and_features(essay_df):
         # append record-level features
         essay_body = clean_essay_text(essay_string)
         # write the essay to .txt
-        name2save = essay_df['partial_link'][i].split('.')[0]
-        tb.save_as_txt(essay_body, name2save)
+        # TODO create a new naming scheme for common lisp essays
+        if '1 of Ansi Common' in essay_df['title'][i]:
+            tb.save_as_txt(essay_body, 'common_lisp_1')
+        elif '2 of Ansi Common' in essay_df['title'][i]:
+            tb.save_as_txt(essay_body, 'common_lisp_2')
+        else:
+            name2save = essay_df['partial_link'][i].split('.')[0]
+            tb.save_as_txt(essay_body, name2save)
         essay_outlinks = extract_essay_outlinks(essay_soup)
         data.append([
                     url,  # full_link
