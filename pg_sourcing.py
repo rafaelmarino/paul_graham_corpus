@@ -22,27 +22,30 @@ def extract_essay_df():
     # <table> HTML table; <tr> table row; <th> table header; <td> table data
     posts = soup.select("tr>td>table>tr>td>font>a")
     # make a list of tuples: (post_title, post_link)
-    title_link_list = [(p.text,
-                        "http://paulgraham.com/" + p['href'],
-                        p['href'],
-                        )
-                       for p in posts]
+    title_link_list = [(p.text, p['href']) for p in posts]
     # turn it to a df
     essay_df = pd.DataFrame(title_link_list,
-                            columns=("title", "link", "file_name"))
+                            columns=("title", "partial_link"))
     essay_df = essay_df.drop_duplicates()  # some essays appear 2x (top, body)
+    essay_df = essay_df.reset_index(drop=True)
+    # drop RSS essay
+    essay_df = essay_df.drop(essay_df[essay_df['title'] == 'RSS'].index)
     return essay_df
 
 
 essay_df = extract_essay_df()
 essay_df.describe()  # 198 unique essays as of Feb 22
 essay_df.head()
+essay_df.to_csv('csv/essay_df.csv')
 
 
 def url2soup(url):
     """Take an essay's url, turn it into a soup and extract the text"""
     essay_soup = tb.click_and_soup(url)
-    essay_soup = essay_soup.select("table>tr>td>table>tr>td>font")[0]
+    try:
+        essay_soup = essay_soup.select("table>tr>td>table>tr>td>font")[0]
+    except IndexError:
+        essay_soup = essay_soup.select("html>body>p")[0]
     # note: some essays have a paragraph tag and some don't
     # vb: "table>tr>td>table>tr>td>font"
     # ds: "table>tr>td>table>tr>td>font>p"
@@ -62,7 +65,11 @@ def extract_essay_outlinks(essay_soup):
     real_links = []
     for link in all_links:
         if not bool(re.findall('f.n', str(link))):
-            real_links.append(link['href'])
+            try:
+                real_links.append(link['href'])
+            except KeyError:
+                # some tags that are not hrefs also exist, eg <a name>
+                pass
     return real_links
 
 
@@ -80,22 +87,31 @@ def clean_essay_text(string_essay):
 def extract_body_and_features(essay_df):
     """Take a dataframe with essay links and return essay body and features"""
     data = []
-    for i in essay_df.index[:5]:
+    for i in essay_df.index[:10]:
         # i = 1
-        url = essay_df['link'][i]
+        print(i, essay_df.index[i], essay_df['title'].iloc[i])
+        if essay_df['partial_link'][i][:5] != 'https':
+            url = "http://paulgraham.com/" + essay_df['partial_link'][i]
+        else:
+            url = essay_df['partial_link'][i]
         essay_soup = url2soup(url)
         essay_string = soup2string(essay_soup)
         # append record-level features
         essay_body = clean_essay_text(essay_string)
+        # write the essay to .txt
+        name2save = essay_df['partial_link'][i].split('.')[0]
+        tb.save_as_txt(essay_body, name2save)
         essay_outlinks = extract_essay_outlinks(essay_soup)
         data.append([
-                    essay_body,
+                    url,
                     essay_outlinks,
                     len(essay_body.split())
                     ])
         time.sleep(0.3 + random.random())  # some server kindness
 
-    feature_df = pd.DataFrame(data, columns=['body', 'outlinks', 'word_count'])
+    feature_df = pd.DataFrame(data, columns=['full_link',
+                                             'outlinks',
+                                             'word_count'])
     return feature_df
 
 
@@ -104,28 +120,7 @@ feature_df = extract_body_and_features(essay_df)
 full_df = pd.merge(essay_df, feature_df, how='left',
                    left_index=True, right_index=True)
 full_df.head()
-
-
-    
-    
-    # save
-    name2save = essay_df['file_name'][i].split('.')[0]
-    tb.save_as_txt(processed_essay, name2save)
-    tb.save_as_txt(processed_essay, 'vb_march23')
-    tb.save_as_txt(processed_essay, 'ds_march23')
-    tb.save_as_html(string_essay, name2save)
-    tb.save_as_txt(string_essay, name2save)
-
-# h2t_essay = h2t.handle(str(essay_soup).strip())
-# tb.save_as_txt(h2t_essay, "ds_h2t")
-
-
-outlink_vector_df = pd.DataFrame(outlink_vector, columns=['index', 'outlinks'])
-outlink_vector_df.head()
-
-
-
-extract_essay_outlinks(essay_soup)
+full_df.to_csv('csv/full_df.csv')
 
 
 
@@ -136,21 +131,6 @@ def extract_essay_date(string_essay):
     re.findall('.*\n', string_essay)[0]
     string_essay.split('\n')[0].strip()
     return
-
-
-# extract_essay_outlinks
-# clean_essay_text
-# extract_essay_date
-
-
-
-
-
-# TODO
-# extract date: month_label
-# extract date: month_number (MM)
-# extract date: year (YYY)
-# replace double breaks for line breaks "\n"
 
 
 
