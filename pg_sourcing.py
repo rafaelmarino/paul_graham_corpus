@@ -34,9 +34,12 @@ def extract_essay_df():
 
 
 essay_df = extract_essay_df()
+essay_df.index.set_names('essay_id', inplace=True)
 essay_df.describe()  # 198 unique essays as of Feb 22
 essay_df.head()
-essay_df.to_csv('csv/essay_df.csv', index=False)
+essay_df.to_csv('csv/essay_df.csv')
+#
+essay_df = pd.read_csv('csv/essay_df.csv', index_col='essay_id')
 
 
 def url2soup(url):
@@ -123,10 +126,13 @@ def extract_body_and_features(essay_df):
 
 # left join the original df with the feature df
 feature_df = extract_body_and_features(essay_df)
-full_df = pd.merge(essay_df, feature_df, how='left',
-                   left_index=True, right_index=True)
+feature_df.index.set_names('essay_id', inplace=True)
+feature_df.head()
+# full_df = pd.merge(essay_df, feature_df, how='left',
+#                    left_index=True, right_index=True)
+full_df = pd.merge(essay_df, feature_df, how='left', on='essay_id')
 full_df.head()
-full_df.to_csv('csv/full_df.csv', index=False)
+full_df.to_csv('csv/full_df.csv')
 
 
 def extract_essay_date(string_essay):

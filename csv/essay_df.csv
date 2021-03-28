@@ -1,4 +1,4 @@
-,title,partial_link
+essay_id,title,partial_link
 0,Life is Short,vb.html
 1,Do Things that Don't Scale,ds.html
 2,The Refragmentation,re.html
@@ -194,7 +194,7 @@
 192,Java's Cover,javacover.html
 193,Beating the Averages,avg.html
 194,Lisp for Web-Based Applications,lwba.html
-195,Chapter 1 of Ansi Common Lisp,https://sep.yimg.com/ty/cdn/paulgraham/acl1.txt?t=1616134637&
-196,Chapter 2 of Ansi Common Lisp,https://sep.yimg.com/ty/cdn/paulgraham/acl2.txt?t=1616134637&
+195,Chapter 1 of Ansi Common Lisp,https://sep.yimg.com/ty/cdn/paulgraham/acl1.txt?t=1616933990&
+196,Chapter 2 of Ansi Common Lisp,https://sep.yimg.com/ty/cdn/paulgraham/acl2.txt?t=1616933990&
 197,Programming Bottom-Up,progbot.html
 198,This Year We Can End the Death Penalty in California,prop62.html
